@@ -55,18 +55,14 @@ This will execute the `vectorAdd` CUDA program and print the result of adding tw
 
 ### **4. Profiling the Program**
 
-For performance analysis, use **Nsight Systems** (`nsys`) or **nvprof** to profile your program and understand how well it is utilizing the GPU.
+For performance analysis, use **Nsight Systems** (`nsys`) or **nvprof** to profile your program and understand how well it is utilizing the GPU.But nvprof is not supported on devices with compute capability 8.0 and higher.
 
-* Using `nvprof`:
 
-```bash
-nvprof ./vectorAdd
-```
 
 * Using `nsys`:
 
 ```bash
-nsys profile ./vectorAdd
+nsys nvprof ./vectorAdd
 ```
 
 These commands will run the program and generate performance reports that give you insights into GPU usage, kernel execution time, and memory transfer details.
