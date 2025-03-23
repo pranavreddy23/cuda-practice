@@ -5,7 +5,6 @@ This project implements vector addition using both CPU and GPU (CUDA) implementa
 ## Overview
 
 The project consists of the following components:
-
 - **vectorAdd_gpu.cu**: CUDA implementation of vector addition.
 - **vectorAdd_cpu.cpp**: CPU implementation of vector addition.
 - **main.cu**: The main orchestrator that runs tests and profiles both implementations.
@@ -26,35 +25,34 @@ The project consists of the following components:
 
 ### Compilation
 
-To compile the project, navigate to the `Projects/vectorAdd` directory and run:
+To compile the project, run:
 
-bash
+```bash
 nvcc -o vectorAdd vectorAdd_gpu.cu vectorAdd_cpu.cpp main.cu
+```
 
 ### Running the Program
 
 After compilation, you can run the program using:
 
-bash
+```bash
 ./vectorAdd
-
+```
 
 This will execute the vector addition tests and display the performance metrics for both CPU and GPU implementations.
 
 ## Output
 
 The program will display:
-
 - The first 10 elements of the input vectors (A and B) and the result vector (C).
 - Performance metrics including CPU time, GPU time, speedup, and memory usage.
 
 ## Conclusion
 
-This project serves as a starting point for exploring CUDA programming and performance profiling. You can extend it by adding more complex operations or additional profiling metrics.
+This vector addition example demonstrates the performance benefits of GPU computing over traditional CPU processing. It serves as a simple but effective introduction to CUDA programming concepts including memory allocation, kernel execution, and performance measurement.
 
-Feel free to contribute or modify the project as you see fit!
+Feel free to modify the code to experiment with different vector sizes or optimization techniques!
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
