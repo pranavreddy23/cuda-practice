@@ -20,6 +20,10 @@ void vectorAdd_gpu(const std::vector<int>& a, const std::vector<int>& b,
   // Create memory tracker
   static Profiler::MemoryTracker& mem_tracker = Profiler::MemoryTracker::getInstance();
 
+  // Create GPU timer for total time measurement
+  Profiler::GPUTimer total_timer;
+  total_timer.start();
+
   // Allocate memory on the device
   int *d_a, *d_b, *d_c;
   cudaMalloc(&d_a, bytes);
@@ -39,8 +43,20 @@ void vectorAdd_gpu(const std::vector<int>& a, const std::vector<int>& b,
   // CTAs per Grid
   int NUM_BLOCKS = (N + NUM_THREADS - 1) / NUM_THREADS;
 
+  // Create GPU timer for kernel timing
+  Profiler::GPUTimer kernel_timer;
+  
+  // Start timing just the kernel execution
+  kernel_timer.start();
+  
   // Launch the kernel on the GPU
   vectorAdd_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(d_a, d_b, d_c, N);
+  
+  // Stop timing the kernel execution
+  kernel_timer.stop();
+  
+  // Store the kernel time
+  Profiler::KernelTimeTracker::last_kernel_time = kernel_timer.elapsed_milliseconds();
 
   // Copy sum vector from device to host
   cudaMemcpy(c.data(), d_c, bytes, cudaMemcpyDeviceToHost);
@@ -49,4 +65,10 @@ void vectorAdd_gpu(const std::vector<int>& a, const std::vector<int>& b,
   cudaFree(d_a);
   cudaFree(d_b);
   cudaFree(d_c);
+  
+  // Stop timing total GPU operation
+  total_timer.stop();
+  
+  // Store the total GPU time
+  Profiler::KernelTimeTracker::last_total_time = total_timer.elapsed_milliseconds();
 }

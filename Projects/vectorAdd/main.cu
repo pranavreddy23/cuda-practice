@@ -70,11 +70,9 @@ void run_test_case(int N) {
     perf.set_cpu_time(cpu_timer.elapsed_milliseconds());
     
     // Run and time GPU implementation
-    Profiler::GPUTimer gpu_timer;
-    gpu_timer.start();
+    Profiler::KernelTimeTracker::reset();
     vectorAdd_gpu(a, b, c_gpu, N);
-    gpu_timer.stop();
-    perf.set_gpu_time(gpu_timer.elapsed_milliseconds());
+    perf.set_gpu_time(Profiler::KernelTimeTracker::last_total_time);
     
     // Print vectors for verification (after they've been populated)
     print_vectors(a, b, c_cpu, c_gpu, N);
