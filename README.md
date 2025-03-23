@@ -90,7 +90,7 @@ Each project directory contains its own README.md with specific instructions for
 For performance analysis, use **Nsight Systems** (`nsys`) to profile your programs:
 
 ```bash
-nsys profile ./[executable_name]
+nsys nvprof ./[executable_name]
 ```
 
 This will generate detailed performance reports with insights into GPU usage, kernel execution time, and memory transfer patterns.
