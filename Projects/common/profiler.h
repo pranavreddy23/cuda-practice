@@ -135,6 +135,19 @@ public:
     }
 };
 
+// Kernel time tracker (for separating kernel execution time from total GPU time)
+class KernelTimeTracker {
+public:
+    // Use inline for static variables (C++17 and later)
+    inline static float last_kernel_time = 0.0f;
+    inline static float last_total_time = 0.0f;
+    
+    static void reset() {
+        last_kernel_time = 0.0f;
+        last_total_time = 0.0f;
+    }
+};
+
 // Performance comparison helper
 class PerformanceComparison {
 private:
@@ -169,11 +182,18 @@ public:
     void print_summary() const {
         std::cout << "\n===== " << test_name << " Performance Summary =====" << std::endl;
         std::cout << "CPU Time: " << cpu_time_ms << " ms" << std::endl;
-        std::cout << "GPU Time: " << gpu_time_ms << " ms" << std::endl;
+        std::cout << "GPU Time (Total): " << gpu_time_ms << " ms" << std::endl;
+        std::cout << "GPU Kernel Time: " << KernelTimeTracker::last_kernel_time << " ms" << std::endl;
+        std::cout << "GPU Data Transfer Time: " << (gpu_time_ms - KernelTimeTracker::last_kernel_time) << " ms" << std::endl;
         
         double speedup = get_speedup();
         if (speedup > 0) {
-            std::cout << "Speedup: " << speedup << "x" << std::endl;
+            std::cout << "Speedup (Total): " << speedup << "x" << std::endl;
+            
+            if (KernelTimeTracker::last_kernel_time > 0) {
+                double kernel_speedup = cpu_time_ms / KernelTimeTracker::last_kernel_time;
+                std::cout << "Speedup (Kernel Only): " << kernel_speedup << "x" << std::endl;
+            }
         } else {
             std::cout << "Speedup: N/A" << std::endl;
         }
