@@ -9,7 +9,7 @@ This project provides a comprehensive implementation of matrix multiplication, d
 ```
 project/
 │
-├── src/
+├── matmul/
 │   ├── main.cu          # Test harness for matrix multiplication
 │   ├── matmul.h         # Header file with function declarations
 │   ├── matmul_cpu.cpp   # CPU implementation
