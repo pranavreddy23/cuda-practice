@@ -79,6 +79,4 @@ This softmax implementation demonstrates the performance benefits of both SIMD o
 
 Feel free to modify the code to experiment with different input sizes, block configurations, or optimization techniques!
 
-## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
