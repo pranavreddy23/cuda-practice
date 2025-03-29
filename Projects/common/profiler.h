@@ -1,10 +1,11 @@
 #ifndef PROFILER_H
 #define PROFILER_H
 
-#include <chrono>
 #include <string>
-#include <iostream>
 #include <vector>
+#include <map>
+#include <iostream>
+#include <chrono>
 #include <cuda_runtime.h>
 
 namespace Profiler {
@@ -81,9 +82,65 @@ public:
         }
         return elapsed;
     }
+};
 
-    float elapsed_seconds() const {
-        return elapsed_milliseconds() / 1000.0f;
+// Flexible kernel time tracker
+class KernelTimeTracker {
+private:
+    static std::map<std::string, float> kernel_times;
+    
+public:
+    static float last_total_time;
+    
+    // Reset all timings
+    static void reset() {
+        last_total_time = 0.0f;
+        kernel_times.clear();
+    }
+    
+    // Record a kernel's execution time
+    static void record_kernel_time(const std::string& kernel_name, float time_ms) {
+        kernel_times[kernel_name] = time_ms;
+    }
+    
+    // Get a specific kernel's time
+    static float get_kernel_time(const std::string& kernel_name) {
+        if (kernel_times.find(kernel_name) != kernel_times.end()) {
+            return kernel_times[kernel_name];
+        }
+        return 0.0f;
+    }
+    
+    // Get all kernel names
+    static std::vector<std::string> get_kernel_names() {
+        std::vector<std::string> names;
+        for (const auto& pair : kernel_times) {
+            names.push_back(pair.first);
+        }
+        return names;
+    }
+    
+    // Get total kernel time (sum of all kernels)
+    static float get_total_kernel_time() {
+        float total = 0.0f;
+        for (const auto& pair : kernel_times) {
+            total += pair.second;
+        }
+        return total;
+    }
+    
+    // Print a summary of all kernel times
+    static void print_kernel_times() {
+        std::cout << "GPU Kernel Timing Breakdown:" << std::endl;
+        float total_kernel_time = 0.0f;
+        
+        for (const auto& pair : kernel_times) {
+            std::cout << "  " << pair.first << ": " << pair.second << " ms" << std::endl;
+            total_kernel_time += pair.second;
+        }
+        
+        std::cout << "  Total Kernels: " << total_kernel_time << " ms" << std::endl;
+        std::cout << "  Memory Ops: " << (last_total_time - total_kernel_time) << " ms" << std::endl;
     }
 };
 
@@ -135,19 +192,6 @@ public:
     }
 };
 
-// Kernel time tracker (for separating kernel execution time from total GPU time)
-class KernelTimeTracker {
-public:
-    // Use inline for static variables (C++17 and later)
-    inline static float last_kernel_time = 0.0f;
-    inline static float last_total_time = 0.0f;
-    
-    static void reset() {
-        last_kernel_time = 0.0f;
-        last_total_time = 0.0f;
-    }
-};
-
 // Performance comparison helper
 class PerformanceComparison {
 private:
@@ -183,15 +227,17 @@ public:
         std::cout << "\n===== " << test_name << " Performance Summary =====" << std::endl;
         std::cout << "CPU Time: " << cpu_time_ms << " ms" << std::endl;
         std::cout << "GPU Time (Total): " << gpu_time_ms << " ms" << std::endl;
-        std::cout << "GPU Kernel Time: " << KernelTimeTracker::last_kernel_time << " ms" << std::endl;
-        std::cout << "GPU Data Transfer Time: " << (gpu_time_ms - KernelTimeTracker::last_kernel_time) << " ms" << std::endl;
+        
+        float total_kernel_time = KernelTimeTracker::get_total_kernel_time();
+        std::cout << "GPU Kernel Time: " << total_kernel_time << " ms" << std::endl;
+        std::cout << "GPU Data Transfer Time: " << (gpu_time_ms - total_kernel_time) << " ms" << std::endl;
         
         double speedup = get_speedup();
         if (speedup > 0) {
             std::cout << "Speedup (Total): " << speedup << "x" << std::endl;
             
-            if (KernelTimeTracker::last_kernel_time > 0) {
-                double kernel_speedup = cpu_time_ms / KernelTimeTracker::last_kernel_time;
+            if (total_kernel_time > 0) {
+                double kernel_speedup = cpu_time_ms / total_kernel_time;
                 std::cout << "Speedup (Kernel Only): " << kernel_speedup << "x" << std::endl;
             }
         } else {
