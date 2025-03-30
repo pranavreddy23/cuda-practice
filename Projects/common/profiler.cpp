@@ -1,7 +1,7 @@
 #include "profiler.h"
 
-// Define the static variables
 namespace Profiler {
-    float KernelTimeTracker::last_kernel_time = 0.0f;
+    // Initialize static members
+    std::map<std::string, float> KernelTimeTracker::kernel_times;
     float KernelTimeTracker::last_total_time = 0.0f;
 }
