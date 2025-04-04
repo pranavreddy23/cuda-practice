@@ -97,9 +97,7 @@ nvcc -O3 -o matmul main.cu matmul_gpu.cu matmul_cpu.cpp
 - Create adaptive block size selection
 - Integrate with cuBLAS for comparison
 
-## License
 
-[Insert your preferred open-source license here]
 
 ## Contributing
 
