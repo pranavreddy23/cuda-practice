@@ -1,2 +1,4 @@
 *.nsys-rep
 *.sqlite
+*.png
+*/output
