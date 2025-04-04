@@ -29,11 +29,12 @@ void colorInversion_cpu_avx2(unsigned char* image, int width, int height) {
     __m256i allOnes = _mm256_set1_epi8(255);
     
     // Create a mask for the alpha channel (every 4th byte)
+    // 0xFF for alpha (to keep original), 0x00 for RGB (to invert)
     __m256i alphaMask = _mm256_set_epi8(
-        0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF,
-        0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF,
-        0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF,
-        0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF
+        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
+        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
+        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
+        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00
     );
     
     // Process 32 bytes (8 pixels) at a time
@@ -45,6 +46,7 @@ void colorInversion_cpu_avx2(unsigned char* image, int width, int height) {
         __m256i inverted = _mm256_sub_epi8(allOnes, pixels);
         
         // Blend the inverted pixels with the original alpha values
+        // This keeps alpha unchanged while inverting R,G,B
         __m256i result = _mm256_blendv_epi8(inverted, pixels, alphaMask);
         
         // Store the result back to memory
@@ -72,9 +74,10 @@ void colorInversion_cpu_sse(unsigned char* image, int width, int height) {
     __m128i allOnes = _mm_set1_epi8(255);
     
     // Create a mask for the alpha channel (every 4th byte)
+    // 0xFF for alpha (to keep original), 0x00 for RGB (to invert)
     __m128i alphaMask = _mm_set_epi8(
-        0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF,
-        0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF
+        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
+        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00
     );
     
     // Process 16 bytes (4 pixels) at a time
@@ -118,4 +121,4 @@ void colorInversion_cpu(unsigned char* image, int width, int height) {
         // Fall back to scalar implementation if neither is available
         colorInversion_cpu_scalar(image, width, height);
     #endif
-} 
+}
