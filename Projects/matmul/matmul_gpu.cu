@@ -46,7 +46,7 @@ void matmul_gpu(const float* A, const float* B, float* C, int M, int N, int K) {
     kernel_timer.start();
     matmul_kernel<<<gridDim, blockDim>>>(d_a, d_b, d_c, M, N, K);
     kernel_timer.stop();
-    Profiler::KernelTimeTracker::last_kernel_time = kernel_timer.elapsed_milliseconds();
+    Profiler::KernelTimeTracker::record_kernel_time("matmul", kernel_timer.elapsed_milliseconds());
 
     cudaMemcpy(C, d_c, sizeof(float) * M * K, cudaMemcpyDeviceToHost);
     cudaFree(d_a);
