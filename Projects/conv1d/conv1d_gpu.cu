@@ -37,21 +37,21 @@ __global__ void conv1d_kernel(float *d_input, float *d_output, float *d_kernel, 
     if (gid < output_size) {
         float result = 0.0f;
         for (int k = 0; k < kernel_size; k++) {
-            result += shared_input[tid + halo_radius + k] * d_kernel[k];
+            result += shared_input[tid + k] * d_kernel[k];
         }
         d_output[gid] = result;
     }
 }
 
-void conv1d_gpu(float *input, float *output, float *kernel, int input_size, int kernel_size) {
+void conv1d_gpu(float *input, float *output, float *kernel, int input_size, int kernel_size) {           
     static Profiler::MemoryTracker& mem_tracker = Profiler::MemoryTracker::getInstance();
     Profiler::GPUTimer total_timer;
     Profiler::GPUTimer kernel_timer;
     
     total_timer.start();
     
-    // Calculate output size
-    int output_size = input_size - kernel_size + 1;
+    // With proper padding, output size equals input size
+    int output_size = input_size;
     
     // Allocate device memory
     float *d_input, *d_output, *d_kernel;

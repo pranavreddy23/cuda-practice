@@ -1,11 +1,13 @@
 #ifndef CONV1D_H
 #define CONV1D_H
 
-void conv1d_cpu(const float* input, const float* kernel, float* output, int input_size, int kernel_size);
-void conv1d_gpu(const float* input, const float* kernel, float* output, int input_size, int kernel_size);
-// CUDA kernel declaration (implemented in conv1d_gpu.cu)
-#ifdef __CUDACC__
-__global__ void conv1d_kernel(float *d_input, float *d_output, float *d_kernel, int input_size, int kernel_size, int output_size);
-#endif
+// GPU implementation of 1D convolution
+void conv1d_gpu(float *input, float *output, float *kernel, int input_size, int kernel_size);
 
-#endif
+// CPU implementation of 1D convolution
+void conv1d_cpu(const float* input, float* output, const float* kernel, int input_size, int kernel_size);
+
+// CPU implementation with zero padding for direct comparison with GPU
+void conv1d_cpu_padded(const float* input, float* output, const float* kernel, int input_size, int kernel_size);
+
+#endif // CONV1D_H
