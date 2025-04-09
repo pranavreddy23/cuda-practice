@@ -1,24 +1,38 @@
 #include "matmul.h"
 #include <cuda_runtime.h>
 #include "../common/profiler.h"
+#define TILE_SIZE 16
 
 __global__ void matmul_kernel(const float* A, const float* B, float* C, int M, int N, int K) {
     // Calculate global thread coordinates
+    __shared__ float tile_a[TILE_SIZE][TILE_SIZE];
+    __shared__ float tile_b[TILE_SIZE][TILE_SIZE];
+
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
 
-    // Check if thread is within matrix dimensions
-    if (row < M && col < K) {
-        float sum = 0.0f;
-        
-        // Perform dot product for this element
-        for (int i = 0; i < N; i++) {
-            sum += A[row * N + i] * B[i * K + col];
+    for(int j = 0; j < (N + TILE_SIZE - 1) / TILE_SIZE; ++j) {
+        if(row < M && col < K && j * TILE_SIZE + tx < N) {
+            tile_a[ty][tx] = A[row * N + j * TILE_SIZE + tx];
+        }else{
+            tile_a[ty][tx] = 0.0f;
         }
-        
-        // Store result in output matrix
-        C[row * K + col] = sum;
+        if(row < M && col < K && j * TILE_SIZE + ty < N) {
+            tile_b[ty][tx] = B[(j * TILE_SIZE + ty) * K + col];
+        }else{
+            tile_b[ty][tx] = 0.0f;
+        }
+        __syncthreads();
+        for(int z = 0; z < TILE_SIZE; ++z) {
+            if(col < K && j * TILE_SIZE + z < N) {
+                C[row * K + col] += tile_a[ty][z] * tile_b[z][tx];
+            }
+        }
+        __syncthreads();
     }
+    
 }
 
 // A, B, C are device pointers (i.e. pointers to memory on the GPU)

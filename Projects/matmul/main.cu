@@ -66,7 +66,7 @@ void run_test_case(int M, int N, int K) {
     mem_tracker.record_cpu_allocation(M * N * sizeof(float) + N * K * sizeof(float) + M * K * sizeof(float) * 2);
     Profiler::CPUTimer cpu_timer;
     cpu_timer.start();
-    matmul_cpu(A, B, c_cpu, M, N, K);
+    matmul_cpu_naive(A, B, c_cpu, M, N, K);
     cpu_timer.stop();
     perf.set_cpu_time(cpu_timer.elapsed_milliseconds());
 
