@@ -12,7 +12,7 @@ __global__ void matmul_kernel(const float* A, const float* B, float* C, int M, i
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     int tx = threadIdx.x;
     int ty = threadIdx.y;
-
+    float value = 0.0f;
     for(int j = 0; j < (N + TILE_SIZE - 1) / TILE_SIZE; ++j) {
         if(row < M && col < K && j * TILE_SIZE + tx < N) {
             tile_a[ty][tx] = A[row * N + j * TILE_SIZE + tx];
@@ -27,12 +27,14 @@ __global__ void matmul_kernel(const float* A, const float* B, float* C, int M, i
         __syncthreads();
         for(int z = 0; z < TILE_SIZE; ++z) {
             if(col < K && j * TILE_SIZE + z < N) {
-                C[row * K + col] += tile_a[ty][z] * tile_b[z][tx];
+                value += tile_a[ty][z] * tile_b[z][tx];
             }
         }
         __syncthreads();
     }
-    
+    if(row < M && col < K) {
+        C[row * K + col] = value;
+    }
 }
 
 // A, B, C are device pointers (i.e. pointers to memory on the GPU)
