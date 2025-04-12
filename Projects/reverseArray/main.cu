@@ -31,9 +31,13 @@ void print_vectors(const float* input, const float* output, int size){
 void run_test_case(int size){
     std::cout << "\n===== Reverse Array Test: N = " << size << " =====" << std::endl;
     
+    // Create multi-approach comparison object
+    Profiler::MultiApproachComparison perf("Reverse Array (N=" + std::to_string(size) + ")");
+    
     // Allocate memory for input and output arrays
     float* input = new float[size];
     float* cpu_output = new float[size];
+    float* avx_output = new float[size];
     float* gpu_output = new float[size];
     
     // Create a copy of the input for verification
@@ -50,61 +54,79 @@ void run_test_case(int size){
     // Make a copy of the input for verification
     std::memcpy(input_copy, input, size * sizeof(float));
 
-    // Create performance comparison object
-    Profiler::PerformanceComparison perf("Reverse Array (N=" + std::to_string(size) + ")");
-
     // Track memory usage
     Profiler::MemoryTracker& mem_tracker = Profiler::MemoryTracker::getInstance();
     mem_tracker.reset(); // Reset counters for this test case
-    mem_tracker.record_cpu_allocation(size * sizeof(float) * 4); // input, cpu_output, gpu_output, input_copy
+    mem_tracker.record_cpu_allocation(size * sizeof(float) * 5); // input, input_copy, cpu_output, avx_output, gpu_output
     
-    // Run and time CPU implementation
+    // Run and time CPU implementation (baseline)
     Profiler::CPUTimer cpu_timer;
     cpu_timer.start();
-    
-    // Copy input to cpu_output first
     std::memcpy(cpu_output, input, size * sizeof(float));
     reverseArray_cpu(cpu_output, size);
-    
     cpu_timer.stop();
-    perf.set_cpu_time(cpu_timer.elapsed_milliseconds());
-
+    double cpu_time = cpu_timer.elapsed_milliseconds();
+    perf.set_baseline_time(cpu_time);
+    perf.record_approach_time("CPU Linear", cpu_time);
+    
+    // Run and time AVX implementation
+    Profiler::CPUTimer avx_timer;
+    avx_timer.start();
+    std::memcpy(avx_output, input, size * sizeof(float));
+    reverseArray_avx(avx_output, size);
+    avx_timer.stop();
+    perf.record_approach_time("CPU AVX", avx_timer.elapsed_milliseconds());
+    
     // Run and time GPU implementation
     Profiler::KernelTimeTracker::reset();
-    
-    // Copy input to gpu_output first
     std::memcpy(gpu_output, input, size * sizeof(float));
     reverseArray_gpu(gpu_output, size);
     
-    perf.set_gpu_time(Profiler::KernelTimeTracker::last_total_time);
-
+    // Only record the kernel time, not the total GPU time
+    float kernel_time = Profiler::KernelTimeTracker::get_total_kernel_time("reverseArray");
+    perf.record_approach_time("GPU Kernel", kernel_time);
+    
     // Print vectors for verification
     print_vectors(input, cpu_output, size);
-    std::cout << "GPU Output: ";
+    std::cout << "AVX Output: ";
+    for(int i = 0; i < std::min(size, 10); i++){
+        std::cout << avx_output[i] << " ";
+    }
+    std::cout << "\nGPU Output: ";
     for(int i = 0; i < std::min(size, 10); i++){
         std::cout << gpu_output[i] << " ";
     }
     std::cout << std::endl;
 
-    // Verify results for both CPU and GPU
-    bool verified_cpu = verify_result(input_copy, cpu_output, size);
-    bool verified_gpu = verify_result(input_copy, gpu_output, size);
-    perf.set_verified(verified_cpu && verified_gpu);
-
+    // Verify results
+    perf.set_approach_verified("CPU Linear", verify_result(input_copy, cpu_output, size));
+    perf.set_approach_verified("CPU AVX", verify_result(input_copy, avx_output, size));
+    perf.set_approach_verified("GPU Kernel", verify_result(input_copy, gpu_output, size));
+    
     // Print performance summary
     perf.print_summary();
+    
+    // Print kernel times with speedups
+    std::cout << "GPU Kernel Timing Breakdown:" << std::endl;
+    for (const auto& kernel_name : {"reverseArray"}) {
+        float kernel_time = Profiler::KernelTimeTracker::get_total_kernel_time(kernel_name);
+        double speedup = cpu_time / kernel_time;
+        std::cout << "  " << kernel_name << ": " << kernel_time << " ms (Speedup: " << speedup << "x)" << std::endl;
+    }
+    
     mem_tracker.print_summary();
 
-    // Clean up memory - make sure each pointer is freed exactly once
+    // Clean up memory
     delete[] input;
-    delete[] cpu_output;    
+    delete[] cpu_output;
+    delete[] avx_output;
     delete[] gpu_output;
     delete[] input_copy;
 }
 
 int main(){
     Profiler::print_device_properties();
-    std::vector<int> sizes = {1<<8, 1<<10, 1<<12, 1<<14, 1<<16};
+    std::vector<int> sizes = {1<<8, 1<<10, 1<<12, 1<<14, 1<<16, 1<<20};
     for(int size : sizes){
         run_test_case(size);
     }
