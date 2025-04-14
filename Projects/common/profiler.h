@@ -84,10 +84,85 @@ public:
     }
 };
 
-// Flexible kernel time tracker
+// Performance comparison helper for multiple approaches
+class MultiApproachComparison {
+private:
+    std::string test_name;
+    double baseline_time_ms;  // Usually the linear CPU implementation time
+    std::map<std::string, double> approach_times;
+    std::map<std::string, bool> approach_verified;
+    
+public:
+    MultiApproachComparison(const std::string& name) 
+        : test_name(name), baseline_time_ms(0) {}
+    
+    void set_baseline_time(double time_ms) {
+        baseline_time_ms = time_ms;
+    }
+    
+    void record_approach_time(const std::string& approach_name, double time_ms) {
+        approach_times[approach_name] = time_ms;
+    }
+    
+    void set_approach_verified(const std::string& approach_name, bool status) {
+        approach_verified[approach_name] = status;
+    }
+    
+    double get_approach_time(const std::string& approach_name) const {
+        auto it = approach_times.find(approach_name);
+        if (it != approach_times.end()) {
+            return it->second;
+        }
+        return 0.0;
+    }
+    
+    double get_speedup(const std::string& approach_name) const {
+        auto it = approach_times.find(approach_name);
+        if (it != approach_times.end() && baseline_time_ms > 0 && it->second > 0) {
+            return baseline_time_ms / it->second;
+        }
+        return 0.0;
+    }
+    
+    std::vector<std::string> get_approach_names() const {
+        std::vector<std::string> names;
+        for (const auto& pair : approach_times) {
+            names.push_back(pair.first);
+        }
+        return names;
+    }
+    
+    void print_summary() const {
+        std::cout << "\n===== " << test_name << " Performance Summary =====" << std::endl;
+        
+        // Print baseline time
+        std::cout << "Baseline (CPU Linear): " << baseline_time_ms << " ms" << std::endl;
+        
+        // Print all approach times and speedups
+        for (const auto& pair : approach_times) {
+            const std::string& name = pair.first;
+            double time = pair.second;
+            double speedup = (baseline_time_ms > 0 && time > 0) ? (baseline_time_ms / time) : 0.0;
+            
+            std::cout << name << " Time: " << time << " ms";
+            if (speedup > 0) {
+                std::cout << " (Speedup: " << speedup << "x)";
+            }
+            
+            auto verify_it = approach_verified.find(name);
+            if (verify_it != approach_verified.end()) {
+                std::cout << " - Verification: " << (verify_it->second ? "PASSED" : "FAILED");
+            }
+            
+            std::cout << std::endl;
+        }
+    }
+};
+
+// GPU kernel time tracker for multiple kernels
 class KernelTimeTracker {
 private:
-    static std::map<std::string, float> kernel_times;
+    static std::map<std::string, std::vector<float>> kernel_times;
     
 public:
     static float last_total_time;
@@ -100,31 +175,18 @@ public:
     
     // Record a kernel's execution time
     static void record_kernel_time(const std::string& kernel_name, float time_ms) {
-        kernel_times[kernel_name] = time_ms;
+        kernel_times[kernel_name].push_back(time_ms);
+        // Don't update last_total_time here - let the caller handle that
     }
     
-    // Get a specific kernel's time
-    static float get_kernel_time(const std::string& kernel_name) {
-        if (kernel_times.find(kernel_name) != kernel_times.end()) {
-            return kernel_times[kernel_name];
-        }
-        return 0.0f;
-    }
-    
-    // Get all kernel names
-    static std::vector<std::string> get_kernel_names() {
-        std::vector<std::string> names;
-        for (const auto& pair : kernel_times) {
-            names.push_back(pair.first);
-        }
-        return names;
-    }
-    
-    // Get total kernel time (sum of all kernels)
-    static float get_total_kernel_time() {
+    // Get total time for a specific kernel
+    static float get_total_kernel_time(const std::string& kernel_name) {
         float total = 0.0f;
-        for (const auto& pair : kernel_times) {
-            total += pair.second;
+        auto it = kernel_times.find(kernel_name);
+        if (it != kernel_times.end()) {
+            for (float time : it->second) {
+                total += time;
+            }
         }
         return total;
     }
@@ -132,15 +194,15 @@ public:
     // Print a summary of all kernel times
     static void print_kernel_times() {
         std::cout << "GPU Kernel Timing Breakdown:" << std::endl;
-        float total_kernel_time = 0.0f;
         
         for (const auto& pair : kernel_times) {
-            std::cout << "  " << pair.first << ": " << pair.second << " ms" << std::endl;
-            total_kernel_time += pair.second;
+            const std::string& kernel_name = pair.first;
+            float total_time = 0.0f;
+            for (float time : pair.second) {
+                total_time += time;
+            }
+            std::cout << "  " << kernel_name << ": " << total_time << " ms" << std::endl;
         }
-        
-        std::cout << "  Total Kernels: " << total_kernel_time << " ms" << std::endl;
-        std::cout << "  Memory Ops: " << (last_total_time - total_kernel_time) << " ms" << std::endl;
     }
 };
 
@@ -189,62 +251,6 @@ public:
         std::cout << "Memory Usage:" << std::endl;
         std::cout << "  CPU: " << (cpu_bytes_allocated / (1024.0 * 1024.0)) << " MB" << std::endl;
         std::cout << "  GPU: " << (gpu_bytes_allocated / (1024.0 * 1024.0)) << " MB" << std::endl;
-    }
-};
-
-// Performance comparison helper
-class PerformanceComparison {
-private:
-    std::string test_name;
-    double cpu_time_ms;
-    double gpu_time_ms;
-    bool verified;
-    
-public:
-    PerformanceComparison(const std::string& name) 
-        : test_name(name), cpu_time_ms(0), gpu_time_ms(0), verified(false) {}
-    
-    void set_cpu_time(double time_ms) {
-        cpu_time_ms = time_ms;
-    }
-    
-    void set_gpu_time(double time_ms) {
-        gpu_time_ms = time_ms;
-    }
-    
-    void set_verified(bool status) {
-        verified = status;
-    }
-    
-    double get_speedup() const {
-        if (cpu_time_ms > 0 && gpu_time_ms > 0) {
-            return cpu_time_ms / gpu_time_ms;
-        }
-        return 0.0;
-    }
-    
-    void print_summary() const {
-        std::cout << "\n===== " << test_name << " Performance Summary =====" << std::endl;
-        std::cout << "CPU Time: " << cpu_time_ms << " ms" << std::endl;
-        std::cout << "GPU Time (Total): " << gpu_time_ms << " ms" << std::endl;
-        
-        float total_kernel_time = KernelTimeTracker::get_total_kernel_time();
-        std::cout << "GPU Kernel Time: " << total_kernel_time << " ms" << std::endl;
-        std::cout << "GPU Data Transfer Time: " << (gpu_time_ms - total_kernel_time) << " ms" << std::endl;
-        
-        double speedup = get_speedup();
-        if (speedup > 0) {
-            std::cout << "Speedup (Total): " << speedup << "x" << std::endl;
-            
-            if (total_kernel_time > 0) {
-                double kernel_speedup = cpu_time_ms / total_kernel_time;
-                std::cout << "Speedup (Kernel Only): " << kernel_speedup << "x" << std::endl;
-            }
-        } else {
-            std::cout << "Speedup: N/A" << std::endl;
-        }
-        
-        std::cout << "Verification: " << (verified ? "PASSED" : "FAILED") << std::endl;
     }
 };
 
