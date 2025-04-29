@@ -69,7 +69,7 @@ int main() {
         // Allocate memory for outputs
         float* cpu_output = new float[size];
         float* gpu_output = new float[size];
-        Profiler::PerformanceComparison perf("Convolution 1D (size=" + std::to_string(size) + ", kernel_size=" + std::to_string(kernel_size) + ")");
+        Profiler::MultiApproachComparison perf("Convolution 1D (size=" + std::to_string(size) + ", kernel_size=" + std::to_string(kernel_size) + ")");
         Profiler::MemoryTracker& mem_tracker = Profiler::MemoryTracker::getInstance();
         mem_tracker.reset();
         mem_tracker.record_cpu_allocation(size * sizeof(float) + size * sizeof(float) + kernel_size * sizeof(float));
@@ -78,12 +78,14 @@ int main() {
         // Run CPU implementation with padding
         conv1d_cpu_padded(input_data, cpu_output, kernel, size, kernel_size);
         cpu_timer.stop();
-    
-        perf.set_cpu_time(cpu_timer.elapsed_milliseconds());
+        double cpu_time = cpu_timer.elapsed_milliseconds();
+        perf.set_baseline_time(cpu_time);
+        perf.record_approach_time("CPU Linear", cpu_time);
         // Run GPU implementation
         Profiler::KernelTimeTracker::reset();
         conv1d_gpu(input_data, gpu_output, kernel, size, kernel_size);
-        perf.set_gpu_time(Profiler::KernelTimeTracker::last_total_time);
+        float kernel_time = Profiler::KernelTimeTracker::get_total_kernel_time("conv1d");
+        perf.record_approach_time("GPU Kernel", kernel_time);
         if(size <= 1000){
             print_array(input_data, size, "Input");
             print_array(cpu_output, size, "CPU Output");
@@ -92,13 +94,13 @@ int main() {
         
         // Verify results
         bool verification = verify_results(cpu_output, gpu_output, size);
+        perf.set_approach_verified("GPU Kernel", verification);
         std::cout << "Verification: " << (verification ? "PASSED" : "FAILED") << std::endl;
         
         // Print performance comparison
-        double gpu_time = Profiler::KernelTimeTracker::last_total_time;
         std::cout << "CPU time: " << cpu_timer.elapsed_milliseconds() << " ms" << std::endl;
-        std::cout << "GPU time: " << gpu_time << " ms" << std::endl;
-        std::cout << "Speedup: " << cpu_timer.elapsed_milliseconds() / gpu_time << "x" << std::endl;
+        std::cout << "GPU time: " << kernel_time << " ms" << std::endl;
+        std::cout << "Speedup: " << cpu_timer.elapsed_milliseconds() / kernel_time << "x" << std::endl;
         
         // Clean up
         delete[] kernel;
