@@ -57,21 +57,24 @@ void process_image(const std::string& input_path) {
     mem_tracker.record_cpu_allocation(image_size * 3); // original + 2 copies
     
     // Create performance comparison object
-    Profiler::PerformanceComparison perf("Color Inversion (" + filename + ")");
+    Profiler::MultiApproachComparison perf("Color Inversion (" + filename + ")");
     
     // Run CPU implementation
     Profiler::CPUTimer cpu_timer;
     cpu_timer.start();
     colorInversion_cpu(cpu_output, width, height);
     cpu_timer.stop();
-    perf.set_cpu_time(cpu_timer.elapsed_milliseconds());
+    double cpu_time = cpu_timer.elapsed_milliseconds();
+    perf.set_baseline_time(cpu_time);
+    perf.record_approach_time("CPU Linear", cpu_time);
     
     // Reset kernel timers before GPU execution
     Profiler::KernelTimeTracker::reset();
     
     // Run GPU implementation
     colorInversion_gpu(gpu_output, width, height);
-    perf.set_gpu_time(Profiler::KernelTimeTracker::last_total_time);
+    float kernel_time = Profiler::KernelTimeTracker::get_total_kernel_time("invert_kernel");
+    perf.record_approach_time("GPU Kernel", kernel_time);
     
     // Save output images
     fs::create_directory("output"); // Create output directory if it doesn't exist
@@ -79,7 +82,8 @@ void process_image(const std::string& input_path) {
     stbi_write_png(gpu_output_path.c_str(), width, height, 4, gpu_output, width * 4);
     
     // Print performance summary
-    perf.set_verified(true); // We're not doing pixel-by-pixel verification
+    // perf.set_approach_verified("CPU Linear", verify_result(cpu_output, width, height));
+    // perf.set_approach_verified("GPU Kernel", verify_result(gpu_output, width, height));
     perf.print_summary();
     
     // Print detailed kernel timing breakdown

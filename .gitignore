@@ -2,3 +2,6 @@
 *.sqlite
 *.png
 */output
+*.jpg
+*.jpeg
+*.vscode
