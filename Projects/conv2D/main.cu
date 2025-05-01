@@ -166,7 +166,7 @@ void process_image(const std::string& image_path, int kernel_size) {
     // --- Initialize Kernel ---
     // identity_kernel_init(kernel, kernel_size); // <-- USE THIS FOR DEBUGGING
     box_blur_kernel_init(kernel, kernel_size);
-    // box_blur_kernel_init(kernel, kernel_size);
+    // gaussian_kernel_init(kernel, kernel_size);
     std::cout << "Kernel initialized" << std::endl;
     // ... (print kernel values if needed) ...
 
@@ -223,7 +223,7 @@ void process_image(const std::string& image_path, int kernel_size) {
     cv::Mat cpu_output_mat_avx(height, width, CV_8UC(channels), cpu_output_avx);
     cv::imwrite(cpu_output_path, cpu_output_mat);
     cv::imwrite(gpu_output_path, gpu_output_mat);
-    cv::imwrite(avx_output_path, cpu_output_mat_avx);
+    cv::imwrite(avx_output_path, cpu_output_mat_avx);   
 
     // --- Print Summary ---
     perf.print_summary();
